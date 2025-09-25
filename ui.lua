@@ -1,11 +1,7 @@
 -- YATIM UI Library
--- Author: Aprilian (dibuat custom, profesional)
--- NOTE: Buat keperluan UI dev tools / panel Roblox Studio
--- Single-file, tidak bergantung nama "Fluent"
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 local YATIM = {}
@@ -22,15 +18,9 @@ local Themes = {
         Panel = Color3.fromRGB(28,28,32),
         Accent = Color3.fromRGB(0,150,255),
         Text = Color3.fromRGB(235,235,235)
-    },
-    Light = {
-        Background = Color3.fromRGB(245,245,247),
-        Panel = Color3.fromRGB(220,220,224),
-        Accent = Color3.fromRGB(0,110,255),
-        Text = Color3.fromRGB(20,20,20)
     }
 }
-local function theme() return Themes[YATIM.Settings.Theme] or Themes.Dark end
+local function theme() return Themes[YATIM.Settings.Theme] end
 
 -- Helper
 local function make(class, props)
@@ -56,10 +46,12 @@ local function makeDraggable(frame, handle)
         end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement) then
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local delta = input.Position - startMouse
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                                       startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
         end
     end)
 end
@@ -90,8 +82,9 @@ function YATIM:CreateWindow(title)
         BackgroundTransparency = 1,
         Parent = root
     })
+    makeDraggable(root, header)
 
-    local titleLbl = make("TextLabel", {
+    make("TextLabel", {
         Text = title or "YATIM UI",
         Size = UDim2.new(0.6,0,1,0),
         Position = UDim2.new(0,12,0,0),
@@ -111,7 +104,6 @@ function YATIM:CreateWindow(title)
         TextColor3 = th.Text,
         Parent = header
     })
-
     local btnMin = make("TextButton", {
         Text = "—",
         Size = UDim2.new(0,32,0,28),
@@ -120,8 +112,6 @@ function YATIM:CreateWindow(title)
         TextColor3 = th.Text,
         Parent = header
     })
-
-    makeDraggable(root, header)
 
     -- Sidebar
     local sidebar = make("Frame", {
@@ -147,6 +137,7 @@ function YATIM:CreateWindow(title)
         end
     end
 
+    -- API
     local API = {}
     function API:CreateTab(name)
         local btn = make("TextButton", {
@@ -156,7 +147,7 @@ function YATIM:CreateWindow(title)
             TextColor3 = th.Text,
             Parent = sidebar
         })
-        local tab = {Name = name, Button = btn}
+        local tab = {Name=name, Button=btn}
         btn.MouseButton1Click:Connect(function()
             clearContent()
             local page = make("Frame", {
@@ -170,6 +161,78 @@ function YATIM:CreateWindow(title)
         table.insert(Tabs, tab)
         if #Tabs==1 then btn:MouseButton1Click() end
         return tab
+    end
+
+    -- Section
+    function API:CreateSection(tab, text)
+        local section = make("Frame", {
+            Size = UDim2.new(1,0,0,200),
+            BackgroundTransparency = 1,
+            Parent = tab.Page
+        })
+        make("UIListLayout", {Parent=section, SortOrder=Enum.SortOrder.LayoutOrder, Padding=UDim.new(0,5)})
+        make("TextLabel", {
+            Text = text,
+            Size = UDim2.new(1,0,0,24),
+            BackgroundTransparency = 1,
+            TextColor3 = th.Accent,
+            Font = Enum.Font.GothamBold,
+            TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = section
+        })
+        return section
+    end
+
+    function API:AddButton(section, text, callback)
+        local btn = make("TextButton", {
+            Text = text,
+            Size = UDim2.new(1,0,0,28),
+            BackgroundColor3 = th.Panel,
+            TextColor3 = th.Text,
+            Parent = section
+        })
+        btn.MouseButton1Click:Connect(function()
+            if callback then callback() end
+        end)
+    end
+
+    function API:AddToggle(section, text, default, callback)
+        local state = default or false
+        local btn = make("TextButton", {
+            Text = text.." : "..tostring(state),
+            Size = UDim2.new(1,0,0,28),
+            BackgroundColor3 = th.Panel,
+            TextColor3 = th.Text,
+            Parent = section
+        })
+        btn.MouseButton1Click:Connect(function()
+            state = not state
+            btn.Text = text.." : "..tostring(state)
+            if callback then callback(state) end
+        end)
+    end
+
+    function API:AddSlider(section, text, min, max, default, callback)
+        local value = default or min
+        local label = make("TextLabel", {
+            Text = text..": "..value,
+            Size = UDim2.new(1,0,0,24),
+            BackgroundTransparency = 1,
+            TextColor3 = th.Text,
+            Parent = section
+        })
+        local slider = make("TextButton", {
+            Size = UDim2.new(1,0,0,24),
+            BackgroundColor3 = th.Panel,
+            Text = "",
+            Parent = section
+        })
+        slider.MouseButton1Click:Connect(function()
+            value = math.clamp(value+1, min, max)
+            label.Text = text..": "..value
+            if callback then callback(value) end
+        end)
     end
 
     -- Close & Minimize
